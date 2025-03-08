@@ -1,6 +1,6 @@
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import User, { findOne } from '../models/User';
+import { hash, compare } from 'bcryptjs';
+import { sign } from 'jsonwebtoken';
 
 // Signup function
 const signup = async (req, res) => {
@@ -13,13 +13,13 @@ const signup = async (req, res) => {
 
   try {
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists.' });
     }
 
     // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hash(password, 10);
 
     // Create new user
     const newUser = new User({
@@ -31,7 +31,7 @@ const signup = async (req, res) => {
     await newUser.save();
 
     // Generate JWT token
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     res.status(201).json({ token, user: { id: newUser._id, username, email } });
   } catch (error) {
@@ -44,11 +44,11 @@ const signup = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body; // Use email instead of username
   try {
-    const user = await User.findOne({ email }); // Find user by email
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    const user = await findOne({ email }); // Find user by email
+    if (!user || !(await compare(password, user.password))) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, user: { id: user._id, username: user.username, email: user.email, role: user.role } });
   } catch (error) {
     console.error('Error logging in:', error);
@@ -57,4 +57,4 @@ const login = async (req, res) => {
 };
 
 // Export the functions
-module.exports = { signup, login };
+export default { signup, login };
